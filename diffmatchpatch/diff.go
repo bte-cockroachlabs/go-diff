@@ -157,9 +157,9 @@ func (dmp *DiffMatchPatch) diffCompute(text1, text2 []rune, checklines bool, dea
 		}
 		// Shorter text is inside the longer text (speedup).
 		return []Diff{
-			Diff{op, string(longtext[:i])},
-			Diff{DiffEqual, string(shorttext)},
-			Diff{op, string(longtext[i+len(shorttext):])},
+			{op, string(longtext[:i])},
+			{DiffEqual, string(shorttext)},
+			{op, string(longtext[i+len(shorttext):])},
 		}
 	} else if len(shorttext) == 1 {
 		// Single character string.
@@ -724,7 +724,6 @@ var (
 	whitespaceRegex      = regexp.MustCompile(`\s`)
 	linebreakRegex       = regexp.MustCompile(`[\r\n]`)
 	blanklineEndRegex    = regexp.MustCompile(`\n\r?\n$`)
-	blanklineStartRegex  = regexp.MustCompile(`^\r?\n\r?\n`)
 )
 
 // diffCleanupSemanticScore computes a score representing whether the internal boundary falls on logical boundaries.
@@ -1119,7 +1118,7 @@ func (dmp *DiffMatchPatch) DiffXIndex(diffs []Diff, loc int) int {
 func (dmp *DiffMatchPatch) DiffPrettyHtml(diffs []Diff) string {
 	var buff bytes.Buffer
 	for _, diff := range diffs {
-		text := strings.Replace(html.EscapeString(diff.Text), "\n", "&para;<br>", -1)
+		text := strings.ReplaceAll(html.EscapeString(diff.Text), "\n", "&para;<br>")
 		switch diff.Type {
 		case DiffInsert:
 			_, _ = buff.WriteString("<ins style=\"background:#e6ffe6;\">")
@@ -1233,7 +1232,7 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 		switch aDiff.Type {
 		case DiffInsert:
 			_, _ = text.WriteString("+")
-			_, _ = text.WriteString(strings.Replace(url.QueryEscape(aDiff.Text), "+", " ", -1))
+			_, _ = text.WriteString(strings.ReplaceAll(url.QueryEscape(aDiff.Text), "+", " "))
 			_, _ = text.WriteString("\t")
 			break
 		case DiffDelete:
@@ -1274,7 +1273,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 		switch op := token[0]; op {
 		case '+':
 			// Decode would Diff all "+" to " "
-			param = strings.Replace(param, "+", "%2b", -1)
+			param = strings.ReplaceAll(param, "+", "%2b")
 			param, err = url.QueryUnescape(param)
 			if err != nil {
 				return nil, err
