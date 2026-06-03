@@ -10,7 +10,7 @@ package diffmatchpatch
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -1073,8 +1073,8 @@ func TestDiffDelta(t *testing.T) {
 	dmp := New()
 
 	for i, tc := range []TestCase{
-		{"Delta shorter than text", "jumps over the lazyx", "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", "Delta length (19) is different from source text length (20)"},
-		{"Delta longer than text", "umps over the lazy", "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", "Delta length (19) is different from source text length (18)"},
+		{"Delta shorter than text", "jumps over the lazyx", "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", "delta length (19) is different from source text length (20)"},
+		{"Delta longer than text", "umps over the lazy", "=4\t-1\t+ed\t=6\t-3\t+a\t=5\t+old dog", "delta length (19) is different from source text length (18)"},
 		{"Invalid URL escaping", "", "+%c3%xy", "invalid URL escape \"%xy\""},
 		{"Invalid UTF-8 sequence", "", "+%c3xy", "invalid UTF-8 token: \"\\xc3xy\""},
 		{"Invalid diff operation", "", "a", "Invalid diff operation in DiffFromDelta: a"},
@@ -1116,6 +1116,7 @@ func TestDiffDelta(t *testing.T) {
 
 	// Convert delta string into a diff.
 	deltaDiffs, err := dmp.DiffFromDelta(text1, delta)
+	assert.NoError(t, err)
 	assert.Equal(t, diffs, deltaDiffs)
 
 	// Test deltas with special characters.
@@ -1443,7 +1444,7 @@ func TestDiffMainWithCheckLines(t *testing.T) {
 }
 
 func TestMassiveRuneDiffConversion(t *testing.T) {
-	sNew, err := ioutil.ReadFile("../testdata/fixture.go")
+	sNew, err := os.ReadFile("../testdata/fixture.go")
 	if err != nil {
 		panic(err)
 	}
@@ -1530,14 +1531,14 @@ func BenchmarkDiffMainRunesLargeLines(b *testing.B) {
 		text1, text2, linearray := dmp.DiffLinesToRunes(s1, s2)
 
 		diffs := dmp.DiffMainRunes(text1, text2, false)
-		diffs = dmp.DiffCharsToLines(diffs, linearray)
+		_ = dmp.DiffCharsToLines(diffs, linearray)
 	}
 }
 
 func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
 	fp, _ := os.Open("../testdata/diff10klinestest.txt")
 	defer fp.Close()
-	data, _ := ioutil.ReadAll(fp)
+	data, _ := io.ReadAll(fp)
 
 	dmp := New()
 
@@ -1547,6 +1548,6 @@ func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
 		text1, text2, linearray := dmp.DiffLinesToRunes(string(data), "")
 
 		diffs := dmp.DiffMainRunes(text1, text2, false)
-		diffs = dmp.DiffCharsToLines(diffs, linearray)
+		_ = dmp.DiffCharsToLines(diffs, linearray)
 	}
 }

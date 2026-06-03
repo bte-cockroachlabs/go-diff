@@ -536,7 +536,7 @@ func (dmp *DiffMatchPatch) diffHalfMatch(text1, text2 []rune) [][]rune {
 	// Check again based on the third quarter.
 	hm2 := dmp.diffHalfMatchI(longtext, shorttext, int(float64(len(longtext)+1)/2))
 
-	hm := [][]rune{}
+	var hm [][]rune
 	if hm1 == nil && hm2 == nil {
 		return nil
 	} else if hm2 == nil {
@@ -1305,7 +1305,7 @@ func (dmp *DiffMatchPatch) DiffFromDelta(text1 string, delta string) (diffs []Di
 	}
 
 	if i != len(runes) {
-		return nil, fmt.Errorf("Delta length (%v) is different from source text length (%v)", i, len(text1))
+		return nil, fmt.Errorf("delta length (%v) is different from source text length (%v)", i, len(text1))
 	}
 
 	return diffs, nil
