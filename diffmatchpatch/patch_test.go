@@ -149,9 +149,9 @@ func TestPatchMakeAndPatchToText(t *testing.T) {
 	type TestCase struct {
 		Name string
 
-		Input1 interface{}
-		Input2 interface{}
-		Input3 interface{}
+		Input1 any
+		Input2 any
+		Input3 any
 
 		Expected string
 	}
@@ -336,6 +336,26 @@ func TestPatchApply(t *testing.T) {
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
 		assert.Equal(t, tc.ExpectedApplies, actualApplies, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
 	}
+}
+
+func TestPatchDeepCopy(t *testing.T) {
+	dmp := New()
+
+	// Empty input produces empty output.
+	assert.Equal(t, []Patch{}, dmp.PatchDeepCopy([]Patch{}))
+
+	// Copy matches original value.
+	patches, err := dmp.PatchFromText("@@ -21,18 +22,17 @@\n jump\n-s\n+ed\n  over \n-the\n+a\n  laz\n")
+	assert.Nil(t, err)
+	assert.Len(t, patches, 1)
+
+	patchesCopy := dmp.PatchDeepCopy(patches)
+	assert.Equal(t, patches, patchesCopy)
+
+	// Mutating the original's diff text must not affect the copy.
+	origText := patches[0].diffs[0].Text
+	patches[0].diffs[0].Text = "mutated"
+	assert.Equal(t, origText, patchesCopy[0].diffs[0].Text)
 }
 
 func TestPatchMakeOutOfRangePanic(t *testing.T) {

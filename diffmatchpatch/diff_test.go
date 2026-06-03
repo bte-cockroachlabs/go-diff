@@ -273,7 +273,9 @@ func TestDiffBisectSplit(t *testing.T) {
 			assert.True(t, utf8.ValidString(d.Text))
 		}
 
-		// TODO define the expected outcome
+		texts := diffRebuildTexts(diffs)
+		assert.Equal(t, tc.Text1, texts[0])
+		assert.Equal(t, tc.Text2, texts[1])
 	}
 }
 
@@ -984,6 +986,7 @@ func TestDiffPrettyHtml(t *testing.T) {
 
 			Expected: "<span>a&para;<br></span><del style=\"background:#ffe6e6;\">&lt;B&gt;b&lt;/B&gt;</del><ins style=\"background:#e6ffe6;\">c&amp;d</ins>",
 		},
+		{Diffs: []Diff{}, Expected: ""},
 	} {
 		actual := dmp.DiffPrettyHtml(tc.Diffs)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))
@@ -1020,6 +1023,7 @@ func TestDiffPrettyText(t *testing.T) {
 
 			Expected: "a\n\x1b[31mb\x1b[0m\n\x1b[31mc\x1b[0m\n\x1b[31m\x1b[0mdef\x1b[32m\x1b[0m\n\x1b[32mg\x1b[0m\n\x1b[32mh\x1b[0m\ni",
 		},
+		{Diffs: []Diff{}, Expected: ""},
 	} {
 		actual := dmp.DiffPrettyText(tc.Diffs)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %#v", i, tc))
@@ -1165,6 +1169,7 @@ func TestDiffXIndex(t *testing.T) {
 	for i, tc := range []TestCase{
 		{"Translation on equality", []Diff{{DiffDelete, "a"}, {DiffInsert, "1234"}, {DiffEqual, "xyz"}}, 2, 5},
 		{"Translation on deletion", []Diff{{DiffEqual, "a"}, {DiffDelete, "1234"}, {DiffEqual, "xyz"}}, 3, 1},
+		{"Location past end of diffs", []Diff{{DiffEqual, "abc"}}, 5, 5},
 	} {
 		actual := dmp.DiffXIndex(tc.Diffs, tc.Location)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
@@ -1186,6 +1191,10 @@ func TestDiffLevenshtein(t *testing.T) {
 		{"Levenshtein with trailing equality", []Diff{{DiffDelete, "абв"}, {DiffInsert, "1234"}, {DiffEqual, "эюя"}}, 4},
 		{"Levenshtein with leading equality", []Diff{{DiffEqual, "эюя"}, {DiffDelete, "абв"}, {DiffInsert, "1234"}}, 4},
 		{"Levenshtein with middle equality", []Diff{{DiffDelete, "абв"}, {DiffEqual, "эюя"}, {DiffInsert, "1234"}}, 7},
+		{"Empty diffs", []Diff{}, 0},
+		{"All equal", []Diff{{DiffEqual, "abc"}}, 0},
+		{"Pure insert", []Diff{{DiffInsert, "abc"}}, 3},
+		{"Pure delete", []Diff{{DiffDelete, "abc"}}, 3},
 	} {
 		actual := dmp.DiffLevenshtein(tc.Diffs)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
@@ -1549,5 +1558,70 @@ func BenchmarkDiffMainRunesLargeDiffLines(b *testing.B) {
 
 		diffs := dmp.DiffMainRunes(text1, text2, false)
 		_ = dmp.DiffCharsToLines(diffs, linearray)
+	}
+}
+
+func TestOperationString(t *testing.T) {
+	assert.Equal(t, "Delete", DiffDelete.String())
+	assert.Equal(t, "Equal", DiffEqual.String())
+	assert.Equal(t, "Insert", DiffInsert.String())
+	assert.Equal(t, "Operation(99)", Operation(99).String())
+}
+
+func TestDiffMainRunes(t *testing.T) {
+	type TestCase struct {
+		Text1    []rune
+		Text2    []rune
+		Expected []Diff
+	}
+
+	dmp := New()
+
+	for i, tc := range []TestCase{
+		{[]rune{}, []rune{}, nil},
+		{[]rune("abc"), []rune("abc"), []Diff{{DiffEqual, "abc"}}},
+		{[]rune("abc"), []rune("ab123c"), []Diff{{DiffEqual, "ab"}, {DiffInsert, "123"}, {DiffEqual, "c"}}},
+		{[]rune("a123bc"), []rune("abc"), []Diff{{DiffEqual, "a"}, {DiffDelete, "123"}, {DiffEqual, "bc"}}},
+		// Multi-byte rune sequences are preserved correctly.
+		{[]rune("老世界"), []rune("新世界"), []Diff{{DiffDelete, "老"}, {DiffInsert, "新"}, {DiffEqual, "世界"}}},
+	} {
+		actual := dmp.DiffMainRunes(tc.Text1, tc.Text2, false)
+		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d", i))
+	}
+}
+
+func TestDiffLinesToRunes(t *testing.T) {
+	type TestCase struct {
+		Text1 string
+		Text2 string
+
+		ExpectedRunes1 []rune
+		ExpectedRunes2 []rune
+		ExpectedLines  []string
+	}
+
+	dmp := New()
+
+	for i, tc := range []TestCase{
+		{
+			"", "alpha\r\nbeta\r\n\r\n\r\n",
+			[]rune{}, []rune{1, 2, 3, 3},
+			[]string{"", "alpha\r\n", "beta\r\n", "\r\n"},
+		},
+		{
+			"a", "b",
+			[]rune{1}, []rune{2},
+			[]string{"", "a", "b"},
+		},
+		{
+			"a\nb\n", "a\nb\n",
+			[]rune{1, 2}, []rune{1, 2},
+			[]string{"", "a\n", "b\n"},
+		},
+	} {
+		actualRunes1, actualRunes2, actualLines := dmp.DiffLinesToRunes(tc.Text1, tc.Text2)
+		assert.Equal(t, tc.ExpectedRunes1, actualRunes1, fmt.Sprintf("Test case #%d runes1", i))
+		assert.Equal(t, tc.ExpectedRunes2, actualRunes2, fmt.Sprintf("Test case #%d runes2", i))
+		assert.Equal(t, tc.ExpectedLines, actualLines, fmt.Sprintf("Test case #%d lines", i))
 	}
 }

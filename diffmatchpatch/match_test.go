@@ -158,6 +158,10 @@ func TestMatchMain(t *testing.T) {
 		{"Exact match", "abcdef", "de", 3, 3},
 		{"Beyond end match", "abcdef", "defy", 4, 3},
 		{"Oversized pattern", "abcdef", "abcdefy", 0, 0},
+		// Negative loc is clamped to 0 before searching.
+		{"Negative loc clamped", "abcdef", "abc", -5, 0},
+		// loc beyond len(text) is clamped to len(text) before searching.
+		{"Loc past end clamped", "abcdef", "xyz", 100, -1},
 	} {
 		actual := dmp.MatchMain(tc.Text1, tc.Text2, tc.Location)
 		assert.Equal(t, tc.Expected, actual, fmt.Sprintf("Test case #%d, %s", i, tc.Name))
