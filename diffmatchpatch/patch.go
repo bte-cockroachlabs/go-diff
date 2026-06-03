@@ -33,19 +33,21 @@ type Patch struct {
 func (p *Patch) String() string {
 	var coords1, coords2 string
 
-	if p.Length1 == 0 {
+	switch p.Length1 {
+	case 0:
 		coords1 = strconv.Itoa(p.Start1) + ",0"
-	} else if p.Length1 == 1 {
+	case 1:
 		coords1 = strconv.Itoa(p.Start1 + 1)
-	} else {
+	default:
 		coords1 = strconv.Itoa(p.Start1+1) + "," + strconv.Itoa(p.Length1)
 	}
 
-	if p.Length2 == 0 {
+	switch p.Length2 {
+	case 0:
 		coords2 = strconv.Itoa(p.Start2) + ",0"
-	} else if p.Length2 == 1 {
+	case 1:
 		coords2 = strconv.Itoa(p.Start2 + 1)
-	} else {
+	default:
 		coords2 = strconv.Itoa(p.Start2+1) + "," + strconv.Itoa(p.Length2)
 	}
 
@@ -112,7 +114,7 @@ func (dmp *DiffMatchPatch) PatchAddContext(patch Patch, text string) Patch {
 }
 
 // PatchMake computes a list of patches.
-func (dmp *DiffMatchPatch) PatchMake(opt ...interface{}) []Patch {
+func (dmp *DiffMatchPatch) PatchMake(opt ...any) []Patch {
 	if len(opt) == 1 {
 		diffs, _ := opt[0].([]Diff)
 		text1 := dmp.DiffText1(diffs)
@@ -292,17 +294,15 @@ func (dmp *DiffMatchPatch) PatchApply(patches []Patch, text string) (string, []b
 					diffs = dmp.DiffCleanupSemanticLossless(diffs)
 					index1 := 0
 					for _, aDiff := range aPatch.diffs {
-						if aDiff.Type != DiffEqual {
+						switch aDiff.Type {
+						case DiffInsert:
 							index2 := dmp.DiffXIndex(diffs, index1)
-							if aDiff.Type == DiffInsert {
-								// Insertion
-								text = text[:startLoc+index2] + aDiff.Text + text[startLoc+index2:]
-							} else if aDiff.Type == DiffDelete {
-								// Deletion
-								startIndex := startLoc + index2
-								text = text[:startIndex] +
-									text[startIndex+dmp.DiffXIndex(diffs, index1+len(aDiff.Text))-index2:]
-							}
+							text = text[:startLoc+index2] + aDiff.Text + text[startLoc+index2:]
+						case DiffDelete:
+							index2 := dmp.DiffXIndex(diffs, index1)
+							startIndex := startLoc + index2
+							text = text[:startIndex] +
+								text[startIndex+dmp.DiffXIndex(diffs, index1+len(aDiff.Text))-index2:]
 						}
 						if aDiff.Type != DiffDelete {
 							index1 += len(aDiff.Text)

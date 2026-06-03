@@ -970,12 +970,10 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			countInsert++
 			textInsert = append(textInsert, []rune(diffs[pointer].Text)...)
 			pointer++
-			break
 		case DiffDelete:
 			countDelete++
 			textDelete = append(textDelete, []rune(diffs[pointer].Text)...)
 			pointer++
-			break
 		case DiffEqual:
 			// Upon reaching an equality, check for prior redundancies.
 			if countDelete+countInsert > 1 {
@@ -1037,7 +1035,6 @@ func (dmp *DiffMatchPatch) DiffCleanupMerge(diffs []Diff) []Diff {
 			countDelete = 0
 			textDelete = nil
 			textInsert = nil
-			break
 		}
 	}
 
@@ -1234,17 +1231,14 @@ func (dmp *DiffMatchPatch) DiffToDelta(diffs []Diff) string {
 			_, _ = text.WriteString("+")
 			_, _ = text.WriteString(strings.ReplaceAll(url.QueryEscape(aDiff.Text), "+", " "))
 			_, _ = text.WriteString("\t")
-			break
 		case DiffDelete:
 			_, _ = text.WriteString("-")
 			_, _ = text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
 			_, _ = text.WriteString("\t")
-			break
 		case DiffEqual:
 			_, _ = text.WriteString("=")
 			_, _ = text.WriteString(strconv.Itoa(utf8.RuneCountInString(aDiff.Text)))
 			_, _ = text.WriteString("\t")
-			break
 		}
 	}
 	delta := text.String()
